@@ -19,6 +19,7 @@ Run:
 """
 
 from __future__ import annotations
+
 from collections import defaultdict
 from datetime import datetime
 
@@ -28,7 +29,7 @@ from datetime import datetime
 # ----------------------------------------------------------------------------
 AOI_BBOX = [85.05, 27.75, 85.62, 28.42]
 EVENT_DATE = datetime(2026, 8, 26)
-DATE_RANGE = "2026-07-15/2026-09-30"   # wide enough to see the full revisit pattern
+DATE_RANGE = "2026-07-15/2026-09-30"  # wide enough to see the full revisit pattern
 
 PC_STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
 AWS_STAC = "https://earth-search.aws.element84.com/v1"
@@ -45,6 +46,7 @@ def check_sentinel1(stac_url: str, collection: str, label: str, sign: bool = Fal
     try:
         if sign:
             import planetary_computer
+
             catalog = pystac_client.Client.open(
                 stac_url, modifier=planetary_computer.sign_inplace
             )
@@ -115,7 +117,8 @@ def check_datasets():
 
     try:
         import torchgeo
-        from torchgeo.datasets import MMFlood, CopernicusBenchFloodS1  # noqa: F401
+        from torchgeo.datasets import CopernicusBenchFloodS1, MMFlood  # noqa: F401
+
         print(f"  torchgeo {torchgeo.__version__} OK")
         print("  MMFlood                 available (S1 + DEM + hydro, EMS labels)")
         print("  CopernicusBenchFloodS1  available (Kuro Siwo subset, 3-class)")
@@ -140,8 +143,9 @@ if __name__ == "__main__":
     # GRD is openly accessible; RTC on Planetary Computer needs a free
     # subscription key. Try both, plus the AWS mirror.
     check_sentinel1(PC_STAC, "sentinel-1-grd", "CHECK 1a - Planetary Computer GRD")
-    check_sentinel1(PC_STAC, "sentinel-1-rtc", "CHECK 1b - Planetary Computer RTC",
-                    sign=True)
+    check_sentinel1(
+        PC_STAC, "sentinel-1-rtc", "CHECK 1b - Planetary Computer RTC", sign=True
+    )
     check_sentinel1(AWS_STAC, "sentinel-1-grd", "CHECK 1c - AWS Earth Search GRD")
 
     check_datasets()
