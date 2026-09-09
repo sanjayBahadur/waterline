@@ -1,0 +1,49 @@
+# Data — staged manually, never committed. See CLAUDE.md.
+# Anchored to repo root: src/waterline/data/ is source code, not this.
+/data/
+
+# Checkpoints, exported models, experiment outputs
+*.ckpt
+*.pt
+*.pth
+*.onnx
+lightning_logs/
+outputs/
+multirun/
+wandb/
+
+# Secrets / local env
+.env
+.env.*
+
+# Local Claude Code session settings — machine-specific, not shared config
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
