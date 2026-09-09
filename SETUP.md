@@ -157,8 +157,7 @@ MMFlood downloads as 11 tar parts — check free disk before starting.
 ```python
 from torchgeo.datasets import MMFlood
 
-ds = MMFlood(root="./data/mmflood", split="train",
-             include_dem=True, download=True)
+ds = MMFlood(root="./data/mmflood", split="train", include_dem=True, download=True)
 print(len(ds), ds[0]["image"].shape)
 ```
 
