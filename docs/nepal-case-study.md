@@ -1,6 +1,6 @@
 # Nepal case study — scope and constraints
 
-**Status: not started. Gated on the M0 Sentinel-1 coverage check.**
+**Status: GO. M0 coverage check passed on 2026-09-10 — see below.**
 
 ## The event
 
@@ -36,11 +36,40 @@ construction, once permanent water is masked using JRC Global Surface Water.
 Measure that false-positive rate with and without terrain channels. This
 requires no hand labelling and tests the M2 hypothesis directly.
 
-## Fallback
+## M0 feasibility outcome
 
-If the M0 check finds no same-relative-orbit pre/post pair over the corridor,
-substitute a mountainous European event already present in MMFlood and record
-that decision here.
+Run: `scripts/verify_feasibility.py`, 2026-09-10.
+
+**Result: best case on the decision rule.** Three same-relative-orbit pre/post
+pairs exist, and they're available on the **RTC** collection (terrain
+correction already applied by the provider), not just raw GRD. Per the
+decision rule in `SETUP.md`, that means M5 proceeds as originally scoped —
+no time budget needed for manual terrain correction via ASF HyP3.
+
+Checked three ways (Planetary Computer GRD, Planetary Computer RTC, AWS Earth
+Search GRD) — all three returned the same 19 underlying Sentinel-1 scenes over
+the AOI, confirming the coverage isn't an artefact of one provider's catalogue.
+
+| Orbit | Direction | Pre-event gap | Post-event gap | Post-event acquisitions |
+|---|---|---|---|---|
+| 19  | descending | 1 day before  | 10 days after | 1 (2026-09-05) |
+| 121 | descending | 6 days before | 5 days after  | 1 (2026-08-31) |
+| 85  | ascending  | 9 days before | 2 days after  | 2 (2026-08-28, 2026-09-09) |
+
+`torchgeo` 0.10.0 confirmed working; `MMFlood` and `CopernicusBenchFloodS1`
+both reachable.
+
+**Not yet decided: which orbit to use as the primary pair.** Orbit 19 gives
+the tightest pre-event baseline (1 day), orbit 85 the tightest post-event
+capture (2 days) plus a second post-event scene for a rough temporal check.
+Picking one affects what the case study actually shows, so this is deferred
+to M5 planning rather than decided here.
+
+## Fallback (not needed)
+
+If the M0 check had found no same-relative-orbit pre/post pair, the plan was
+to substitute a mountainous European event already present in MMFlood. Kept
+here for the record — the coverage check passed, so this wasn't invoked.
 
 ## Tone
 
