@@ -19,6 +19,10 @@ wandb/
 # Local Claude Code session settings — machine-specific, not shared config
 .claude/settings.local.json
 
+# Personal running log of work done in this repo — not project documentation,
+# stays on your machine only.
+.userlogs.txt
+
 # Python
 __pycache__/
 *.py[cod]
