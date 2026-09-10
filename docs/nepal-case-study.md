@@ -42,9 +42,11 @@ Run: `scripts/verify_feasibility.py`, 2026-09-10.
 
 **Result: best case on the decision rule.** Three same-relative-orbit pre/post
 pairs exist, and they're available on the **RTC** collection (terrain
-correction already applied by the provider), not just raw GRD. Per the
-decision rule in `SETUP.md`, that means M5 proceeds as originally scoped —
-no time budget needed for manual terrain correction via ASF HyP3.
+correction already applied by the provider), not just raw GRD. The decision
+rule was: pairs on RTC → M5 proceeds as scoped; pairs only on GRD → proceed,
+but budget time for manual terrain correction via ASF HyP3; no pairs → drop
+M5. This is the first case, so M5 proceeds as originally scoped — no ASF
+HyP3 detour needed.
 
 Checked three ways (Planetary Computer GRD, Planetary Computer RTC, AWS Earth
 Search GRD) — all three returned the same 19 underlying Sentinel-1 scenes over
