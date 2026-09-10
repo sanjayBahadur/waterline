@@ -18,9 +18,14 @@ Run:
 from __future__ import annotations
 
 import sys
+import warnings
 from pathlib import Path
 
-DATA_ROOT = Path("data/mmflood")
+# Anchored to this file's location, not the shell's working directory — a
+# relative "data/mmflood" would resolve differently (and wrongly) depending
+# on which folder you happen to run this from.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_ROOT = PROJECT_ROOT / "data" / "mmflood"
 CHANNEL_NAMES = ["VV", "VH", "DEM"]  # order fixed by CLAUDE.md: SAR, then terrain
 IGNORE_INDEX = 255  # MMFlood's sentinel for missing-data pixels; excluded from stats
 PATCH_SIZE = 512  # pixels; arbitrary for inspection, not a modeling choice
@@ -34,7 +39,7 @@ def main() -> None:
         )
 
     from torchgeo.datasets import MMFlood
-    from torchgeo.samplers import RandomGeoSampler
+    from torchgeo.samplers import RandomPatchSampler
 
     print(f"Loading MMFlood from {DATA_ROOT} (train split, DEM included)...")
     ds = MMFlood(root=str(DATA_ROOT), split="train", include_dem=True, download=False)
@@ -42,7 +47,7 @@ def main() -> None:
 
     # MMFlood is geo-indexed (real-world coordinates), not list-indexed —
     # a sampler draws one valid PATCH_SIZE x PATCH_SIZE query instead of ds[0].
-    sampler = RandomGeoSampler(ds, size=PATCH_SIZE, length=1)
+    sampler = RandomPatchSampler(ds, size=PATCH_SIZE, length=1)
     query = next(iter(sampler))
     sample = ds[query]
 
@@ -70,12 +75,20 @@ def main() -> None:
     print(f"\nignored (missing-data) pixels: {ignored_fraction:.4%}")
     print(f"flood fraction, of valid pixels: {flood_fraction:.4%}")
 
-    out_dir = Path("outputs")
+    out_dir = PROJECT_ROOT / "outputs"
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / "mmflood_sample.png"
     # ds.plot() ships with torchgeo, tailored to MMFlood specifically —
-    # reused rather than hand-rolling a figure.
-    fig = ds.plot(sample, suptitle="MMFlood sample: VV/VH false-colour, DEM, mask")
+    # reused rather than hand-rolling a figure. It divides VV by VH to build
+    # a false-colour composite; a patch with a true-zero VH pixel triggers a
+    # harmless divide-by-zero (produces inf, which the library's own code
+    # immediately clips to a valid range) — suppressed here so it doesn't
+    # clutter the report, not because the result is wrong.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", category=RuntimeWarning, message="divide by zero"
+        )
+        fig = ds.plot(sample, suptitle="MMFlood sample: VV/VH false-colour, DEM, mask")
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     print(f"\nSaved figure to {out_path}")
 
