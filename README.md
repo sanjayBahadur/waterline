@@ -45,7 +45,7 @@ It's included anyway, for two reasons. It's an honest demonstration of where the
 ```bash
 git clone https://github.com/sanjayBahadur/waterline
 cd waterline
-uv sync                    # or: pip install -e ".[dev]"
+uv sync --extra dev        # or: pip install -e ".[dev]"
 pre-commit install
 ```
 
@@ -58,7 +58,10 @@ from torchgeo.datasets import MMFlood
 ds = MMFlood(root="./data/mmflood", split="train", include_dem=True, download=True)
 ```
 
-Expected layout is documented in [`SETUP.md`](SETUP.md).
+MMFlood is indexed by real-world coordinates, not list position — see
+[`scripts/inspect_mmflood.py`](scripts/inspect_mmflood.py) for how to
+correctly pull a single sample out of it. Expected `data/` layout is
+documented in [`CLAUDE.md`](CLAUDE.md#data-handling).
 
 Train:
 
