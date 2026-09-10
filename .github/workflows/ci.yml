@@ -15,7 +15,12 @@ jobs:
   quality:
     name: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # This is a ceiling to catch a genuinely hung job, not the target
+    # duration. CLAUDE.md's "under 5 minutes" is a steady-state target
+    # with a warm dependency cache; a cold install of this stack (torch,
+    # torchgeo, rasterio, geopandas, onnxruntime, ...) can legitimately
+    # take longer the first time a cache is missed.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
