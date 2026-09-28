@@ -49,7 +49,11 @@ jobs:
         run: uv run mypy
 
       - name: Test
-        run: uv run pytest
+        # slow tests need the real, un-vendored MMFlood dataset -- CI has
+        # no access to it. They're also skipif-guarded in case this ever
+        # runs without the -m filter, but exclude explicitly here too,
+        # matching the marker's own documented intent (pyproject.toml).
+        run: uv run pytest -m "not slow"
 
       # TODO(M1): add a smoke training run on a fixture subset (one batch,
       # a few steps) so broken training code fails here rather than on a
