@@ -35,6 +35,12 @@ dist/
 .venv/
 venv/
 
+# Locking dependencies is deliberate future work (M6, reproducibility
+# pass), not something to land as a side effect of running `uv sync`.
+# Committed once, prematurely, in an earlier session (#26) and removed
+# again (#27) for exactly this reason -- ignored now so it can't recur.
+uv.lock
+
 # Tooling caches
 .ruff_cache/
 .mypy_cache/
