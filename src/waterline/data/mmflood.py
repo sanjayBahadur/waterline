@@ -43,7 +43,7 @@ METADATA_FILE = "activations.json"
 CHANNEL_NAMES = ["VV", "VH", "DEM"]
 
 
-def _event_ids(root: Path, subset: str) -> list[str]:
+def event_ids_for_subset(root: Path, subset: str) -> list[str]:
     """Event IDs MMFlood itself assigns to a subset (train/val/test)."""
     df = pd.read_json(root / METADATA_FILE).transpose()
     # pandas' .tolist() is untyped (returns Any) -- cast for mypy strict.
@@ -107,7 +107,7 @@ class MMFloodSplit(IntersectionDataset):
         self.index = self.image.index
 
 
-def _split_for_events(
+def split_for_events(
     root: Path, event_ids: list[str], include_dem: bool
 ) -> MMFloodSplit:
     s1_paths = _tile_paths(root, event_ids, "s1_raw")
@@ -119,7 +119,7 @@ def _split_for_events(
 def _split_for_tile_ids(
     root: Path, event_ids: list[str], tile_ids: set[str], include_dem: bool
 ) -> MMFloodSplit:
-    """Like _split_for_events, but filtered down to a specific tile-ID
+    """Like split_for_events, but filtered down to a specific tile-ID
     subset -- used by the random split, which pools tiles from many events
     and only wants some of each event's tiles in a given group.
     """
@@ -194,16 +194,16 @@ class WaterlineDataModule(pl.LightningDataModule):
         self.test_dataset: MMFloodSplit
 
     def setup(self, stage: str | None = None) -> None:
-        val_events = _event_ids(self.root, "val")
-        self.val_dataset = _split_for_events(self.root, val_events, self.include_dem)
+        val_events = event_ids_for_subset(self.root, "val")
+        self.val_dataset = split_for_events(self.root, val_events, self.include_dem)
 
         if self.split_strategy == "event":
-            train_events = _event_ids(self.root, "train")
-            test_events = _event_ids(self.root, "test")
-            self.train_dataset = _split_for_events(
+            train_events = event_ids_for_subset(self.root, "train")
+            test_events = event_ids_for_subset(self.root, "test")
+            self.train_dataset = split_for_events(
                 self.root, train_events, self.include_dem
             )
-            self.test_dataset = _split_for_events(
+            self.test_dataset = split_for_events(
                 self.root, test_events, self.include_dem
             )
             return
@@ -211,8 +211,8 @@ class WaterlineDataModule(pl.LightningDataModule):
         # "random": pool train+test tiles, reshuffle at the tile level,
         # keeping the same group sizes as the event-wise split so total
         # data volume isn't a confound -- only the split rule changes.
-        train_events = _event_ids(self.root, "train")
-        test_events = _event_ids(self.root, "test")
+        train_events = event_ids_for_subset(self.root, "train")
+        test_events = event_ids_for_subset(self.root, "test")
         pool_events = train_events + test_events
         pool_tile_ids = [
             Path(p).stem for p in _tile_paths(self.root, pool_events, "s1_raw")
