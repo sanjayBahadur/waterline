@@ -34,13 +34,18 @@ from kornia.constants import DataKey, Resample
 from torch.utils.data import DataLoader
 from torchgeo.datamodules.mmflood import MMFloodDataModule as _TorchgeoMMFloodStats
 from torchgeo.datasets.geo import IntersectionDataset, RasterDataset
-from torchgeo.datasets.utils import stack_samples
+from torchgeo.datasets.utils import GeoSlice, Sample, stack_samples
 from torchgeo.samplers import GridGeoSampler, RandomPatchSampler
 
 from waterline.data.splits import SplitStrategy, random_tile_split
 
 METADATA_FILE = "activations.json"
 CHANNEL_NAMES = ["VV", "VH", "DEM"]
+# Duplicated from eval/metrics.py's own IGNORE_INDEX (not imported from
+# there) to avoid a circular import: eval/harness.py already imports
+# from this module. Both are MMFlood's own fixed convention (255), not
+# something either module owns independently.
+IGNORE_INDEX = 255
 
 
 def event_ids_for_subset(root: Path, subset: str) -> list[str]:
@@ -105,6 +110,25 @@ class MMFloodSplit(IntersectionDataset):
         self.mask = _ExplicitPathsComponent(mask_paths, "mask")
         super().__init__(self.image, self.mask)
         self.index = self.image.index
+
+    def __getitem__(self, index: GeoSlice) -> Sample:
+        """Same fix MMFlood's own __getitem__ applies, and for the same
+        reason: some source pixels are genuinely missing data (sensor
+        gaps, mosaic edges) and come back as NaN from the base
+        IntersectionDataset -- not something building on IntersectionDataset
+        directly inherits for free. Found by running Otsu across the
+        *entire* test split (#7); earlier spot-checks on a handful of
+        patches happened not to hit one.
+
+        NaN image pixels get zeroed and their mask pixels get set to
+        ignore_index (255), matching MMFlood's own convention, so a
+        missing-data pixel is never silently scored as "not flood."
+        """
+        data = super().__getitem__(index)
+        missing_data = data["image"].isnan().any(dim=0)
+        data["image"][:, missing_data] = 0
+        data["mask"][missing_data] = IGNORE_INDEX
+        return data
 
 
 def split_for_events(

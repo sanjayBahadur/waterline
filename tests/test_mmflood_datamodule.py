@@ -10,8 +10,15 @@ from pathlib import Path
 
 import pytest
 import torch
+from torchgeo.samplers import GridGeoSampler
 
-from waterline.data.mmflood import CHANNEL_NAMES, WaterlineDataModule
+from waterline.data.mmflood import (
+    CHANNEL_NAMES,
+    IGNORE_INDEX,
+    WaterlineDataModule,
+    event_ids_for_subset,
+    split_for_events,
+)
 from waterline.data.splits import SplitStrategy
 
 DATA_ROOT = Path(__file__).resolve().parent.parent / "data" / "mmflood"
@@ -50,6 +57,28 @@ def test_datamodule_split_sizes_match_between_strategies() -> None:
             len(dm.test_dataset),
         )
     assert sizes["event"] == sizes["random"]
+
+
+@pytest.mark.slow
+def test_no_nan_pixels_survive_across_full_test_split() -> None:
+    """Some source tiles have genuine sensor gaps -- caught only by
+    scanning the *entire* test split with Otsu (#7); a handful of
+    spot-checked patches earlier happened not to hit one. MMFloodSplit's
+    __getitem__ must zero those image pixels and mark their mask
+    ignore_index, exactly like MMFlood's own __getitem__ does -- not
+    something inherited for free from IntersectionDataset.
+    """
+    events = event_ids_for_subset(DATA_ROOT, "test")
+    dataset = split_for_events(DATA_ROOT, events, include_dem=True)
+    sampler = GridGeoSampler(dataset, size=256, stride=256)
+
+    for query in sampler:
+        sample = dataset[query]
+        assert not torch.isnan(sample["image"]).any(), (
+            "NaN pixel survived into a sample -- missing-data cleanup broke"
+        )
+        mask_values = torch.unique(sample["mask"])
+        assert set(mask_values.tolist()) <= {0, 1, IGNORE_INDEX}
 
 
 @pytest.mark.slow

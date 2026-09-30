@@ -10,6 +10,7 @@ import pytest
 import torch
 
 from waterline.eval.harness import evaluate_subset
+from waterline.models.otsu import otsu_predict
 
 DATA_ROOT = Path(__file__).resolve().parent.parent / "data" / "mmflood"
 
@@ -48,3 +49,35 @@ def test_relief_buckets_both_populated() -> None:
     )
     assert report.per_relief["flat"]["n_pixels"] > 0
     assert report.per_relief["high-relief"]["n_pixels"] > 0
+
+
+@pytest.mark.slow
+def test_otsu_baseline_scores_sanely_on_val() -> None:
+    """The real classical baseline (#7), not a placeholder predictor --
+    scored on val (7 events, fast) rather than test (34 events, ~100s)
+    for routine local runs.
+    """
+    report = evaluate_subset(otsu_predict, DATA_ROOT, subset="val", patch_size=256)
+    assert 0.0 <= report.overall["iou"] <= 1.0
+    assert (
+        report.overall["recall"] > 0.5
+    )  # Otsu over-predicts flood; recall should be high
+
+
+@pytest.mark.slow
+def test_otsu_confirms_high_relief_is_harder() -> None:
+    """Locks in the core finding this project exists to investigate:
+    the classical baseline should do measurably worse in high-relief
+    terrain than flat terrain (radar shadow producing false positives).
+    Deterministic (Otsu has no randomness, GridGeoSampler tiles exactly
+    the same way every run), so this is a real regression check, not a
+    flaky one.
+    """
+    report = evaluate_subset(otsu_predict, DATA_ROOT, subset="val", patch_size=256)
+    flat, high_relief = report.per_relief["flat"], report.per_relief["high-relief"]
+    assert high_relief["precision"] < flat["precision"], (
+        "expected high-relief terrain to show worse precision than flat "
+        "terrain (radar shadow -> false positives) -- if this fails, "
+        "either the finding genuinely changed or something in the "
+        "relief-bucketing/prediction pipeline broke"
+    )
