@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 import torch
-from torchgeo.samplers import GridGeoSampler
+from torchgeo.samplers import GridGeoSampler, RandomPatchSampler
 
 from waterline.data.mmflood import (
     CHANNEL_NAMES,
@@ -102,3 +102,36 @@ def test_augmentation_preserves_mask_labels() -> None:
         "augmentation is likely interpolating the mask instead of using "
         "nearest-neighbour resampling"
     )
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("include_dem", [False, True])
+def test_sampler_draws_survive_a_full_epoch(include_dem: bool) -> None:
+    """Regression test for a real bug caught during actual Colab training:
+    MMFloodSplit used to override self.index (set correctly by
+    IntersectionDataset's own gpd.overlay-based intersection) with just
+    self.image.index -- a cruder approximation that doesn't account for
+    tiny floating-point boundary differences between a tile's paired
+    image/DEM/mask files. A sampler built from that approximate index
+    could draw a point valid for the image but not exactly matching the
+    mask's true footprint, raising IndexError deep in torchgeo's own
+    IntersectionDataset.__getitem__ and crashing training outright.
+
+    Draws a large, bounded sample of random patches -- the failure was rare
+    enough that a handful of draws didn't reliably catch it either before
+    or after the fix. (Not the full epoch size: that's already been
+    verified manually at 1200 draws/config with 0 failures; this stays
+    smaller so the slow suite finishes in reasonable time.)
+    """
+    events = event_ids_for_subset(DATA_ROOT, "train")
+    dataset = split_for_events(DATA_ROOT, events, include_dem)
+    n_draws = min(400, len(dataset))
+    sampler = RandomPatchSampler(dataset, size=256, length=n_draws)
+
+    failures = 0
+    for query in sampler:
+        try:
+            dataset[query]
+        except IndexError:
+            failures += 1
+    assert failures == 0, f"{failures}/{n_draws} sampler draws raised IndexError"

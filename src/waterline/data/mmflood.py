@@ -105,11 +105,23 @@ class MMFloodSplit(IntersectionDataset):
         if dem_paths is not None:
             dem = _ExplicitPathsComponent(dem_paths, "DEM")
             image = image & dem
-            image.index = dem.index
+            # NOTE: no `image.index = dem.index` override here (MMFlood's own
+            # class does this). IntersectionDataset.__init__ already computes
+            # a correct, precise geometric intersection via gpd.overlay --
+            # overriding it with just one side's raw index throws that away
+            # and lets a sampler draw a point valid for one file but not
+            # exactly matching the other's true footprint (real floating-
+            # point boundary differences between paired image/DEM/mask
+            # files, however small, are enough). Confirmed by reproducing
+            # this exact failure during real training: an IndexError deep
+            # in torchgeo's own IntersectionDataset.__getitem__, from a
+            # query that was valid for one component but not the mask.
         self.image = image
         self.mask = _ExplicitPathsComponent(mask_paths, "mask")
         super().__init__(self.image, self.mask)
-        self.index = self.image.index
+        # Same reasoning: trust the gpd.overlay intersection super().__init__
+        # just computed between self.image and self.mask. Do not override
+        # self.index with self.image.index here.
 
     def __getitem__(self, index: GeoSlice) -> Sample:
         """Same fix MMFlood's own __getitem__ applies, and for the same
